@@ -306,7 +306,6 @@ export class ColorGameController {
     @Body() placeBetDto: PlaceBetDto,
   ): Promise<UserBet> {
     try {
-      // Automatically set user_id from JWT
       placeBetDto.user_id = req.user.id;
 
       return await this.colorGameService.placeBet(placeBetDto);

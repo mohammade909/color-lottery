@@ -99,7 +99,7 @@ interface ColorGameState {
   selectBetValue: (value: string) => void;
   setBetAmount: (amount: number) => void;
   placeBet: () => Promise<void>;
-  fetchGameResults: (limit?: number) => Promise<void>;
+  fetchGameResults: (duration:string) => Promise<void>;
   fetchUserBets: () => Promise<void>;
   resetBetSelection: () => void;
   setupSocketListeners: () => void;
@@ -150,17 +150,23 @@ const useColorGameStore = create<ColorGameState>((set, get) => ({
       set({ loading: true, error: null });
       const response = await colorGameAPI.getGameByDuration(duration);
 
-      // Convert array to record with duration as key for easy acces
-
-      set({
-        selectedGame: response,
+      // Add or replace the specific game in activeGames by duration
+      set((state) => ({
+        activeGames: {
+          ...state.activeGames,
+          [duration]: response.data, // This will add if not exists, or replace if exists
+        },
+        // Update selectedGame if it matches the duration we just fetched
+        selectedGame:
+          state.selectedGame?.duration === duration
+            ? response.data
+            : state.selectedGame,
         loading: false,
-        // If no game is selected yet and we have games, select the 30s one by default
-        // selectedGame: get().selectedGame || gamesRecord[GameDuration.THIRTY_SECONDS] || null
-      });
+      }));
+  
     } catch (error) {
-      console.error("Failed to fetch active games:", error);
-      set({ loading: false, error: "Failed to load active games" });
+      console.error("Failed to fetch game by duration:", error);
+      set({ loading: false, error: "Failed to load game" });
     }
   },
 
@@ -243,10 +249,10 @@ const useColorGameStore = create<ColorGameState>((set, get) => ({
     }
   },
 
-  fetchGameResults: async (limit = 10) => {
+  fetchGameResults: async (duration:string) => {
     try {
       set({ loading: true, error: null });
-      const response = await colorGameAPI.getRecentResults();
+      const response = await colorGameAPI.getRecentResults(duration);
       set({ gameResults: response, loading: false });
     } catch (error) {
       console.error("Failed to fetch game results:", error);

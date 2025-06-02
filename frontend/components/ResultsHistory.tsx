@@ -42,13 +42,14 @@ const ResultsHistory: React.FC = () => {
     userBets, 
     fetchUserBets, 
     fetchGameResults, 
+    selectedGame,
     loading, 
     refresh 
   } = useColorGameStore();
 
   // Memoize refresh function to prevent unnecessary re-renders
   const refreshData = useCallback(() => {
-    fetchGameResults();
+    fetchGameResults(selectedGame?.duration??'30s');
     fetchUserBets();
     if (user?.id) {
       getProfile(user.id);

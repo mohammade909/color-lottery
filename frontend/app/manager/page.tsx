@@ -594,6 +594,8 @@ import WinRates from '@/components/dashboard/WinRates';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import ActiveGamesAnalytics from '@/components/dashboard/ActiveGamesAnalytics';
+import RoleBasedLayout from '@/components/Layout/RoleBasedLayout';
 
 const AdminDashboard: React.FC = () => {
   const {
@@ -618,8 +620,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <Header
           title="Admin Dashboard"
@@ -633,6 +634,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Statistics Cards */}
         {statistics && <StatisticsCards statistics={statistics} />}
+       < ActiveGamesAnalytics/>
 
         {/* Active Games and Recent Results */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -649,7 +651,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 };
 

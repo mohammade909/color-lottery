@@ -1,19 +1,12 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Play, Square, ToggleLeft, ToggleRight, AlertTriangle, BarChart3, Users, Clock, DollarSign, Activity } from 'lucide-react';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 // API base URL - update this to match your backend
 const API_BASE_URL = 'http://localhost:8800'; // Change this to your actual API URL
 
-// Type definitions
-interface Game {
-  id: string;
-  duration: string;
-  status: 'active' | 'betting' | 'ended' | 'waiting';
-  startTime: string;
-  endTime: string;
-  isManipulated: boolean;
-}
+
 
 interface BettingStat {
   duration: string;
@@ -50,30 +43,28 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-type GameStatus = 'active' | 'betting' | 'ended' | 'waiting';
+// type GameStatus = 'active' | 'betting' | 'ended' | 'waiting';
 type GameColor = 'red' | 'green' | 'blue' | 'yellow' | 'purple' | 'orange';
 
 const Manipulation: React.FC = () => {
-  const [activeGames, setActiveGames] = useState<Game[]>([]);
+   const {
+     statistics,
+     activeGames,
+     recentResults,
+     loading,
+     error,
+     connectionStatus,
+     refreshing,
+     handleRefresh,
+     handleForceEndGames,
+     broadcastMessage,
+   } = useDashboardData();
   const [bettingStats, setBettingStats] = useState<BettingStat[]>([]);
-  const [recentResults, setRecentResults] = useState<GameResult[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [gameAnalysis, setGameAnalysis] = useState<GameAnalysis | null>(null);
-  const [error, setError] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Fetch active games
-  const fetchActiveGames = useCallback(async (): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/color-game/active-games`);
-      const result: ApiResponse<Game[]> = await response.json();
-      setActiveGames(result.success ? result.data || [] : []);
-    } catch (err) {
-      setError('Failed to fetch active games');
-      setActiveGames([]);
-    }
-  }, []);
+
 
   // Fetch betting statistics
   const fetchBettingStats = useCallback(async (): Promise<void> => {
@@ -82,22 +73,11 @@ const Manipulation: React.FC = () => {
       const result: ApiResponse<BettingStat[]> = await response.json();
       setBettingStats(result.success ? result.data || [] : []);
     } catch (err) {
-      setError('Failed to fetch betting statistics');
+      // setError('Failed to fetch betting statistics');
       setBettingStats([]);
     }
   }, []);
 
-  // Fetch recent results
-  const fetchRecentResults = useCallback(async (): Promise<void> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/color-game/results?limit=10`);
-      const result: ApiResponse<GameResult[]> = await response.json();
-      setRecentResults(result.success ? result.data || [] : []);
-    } catch (err) {
-      setError('Failed to fetch recent results');
-      setRecentResults([]);
-    }
-  }, []);
 
   // Fetch game analysis
   const fetchGameAnalysis = useCallback(async (gameId: string): Promise<void> => {
@@ -106,30 +86,12 @@ const Manipulation: React.FC = () => {
       const result: ApiResponse<GameAnalysis> = await response.json();
       setGameAnalysis(result.success ? result.data || null : null);
     } catch (err) {
-      setError('Failed to fetch game analysis');
+      // setError('Failed to fetch game analysis');
       setGameAnalysis(null);
     }
   }, []);
 
-  // Restart all games
-  const restartAllGames = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/color-game/admin/restart-games`, {
-        method: 'POST',
-      });
-      const result: ApiResponse<any> = await response.json();
-      if (result.success) {
-        alert('All games restarted successfully');
-        await fetchData();
-      } else {
-        alert('Failed to restart games: ' + (result.message || 'Unknown error'));
-      }
-    } catch (err) {
-      alert('Error restarting games: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-    setLoading(false);
-  };
+
 
   // Force end all games
   const forceEndAllGames = async (): Promise<void> => {
@@ -155,7 +117,7 @@ const Manipulation: React.FC = () => {
 
   // Toggle manipulation for a game
   const toggleManipulation = async (gameId: string, enable: boolean): Promise<void> => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/color-game/admin/toggle-manipulation/${gameId}?enable=${enable}`, {
         method: 'POST',
@@ -163,35 +125,17 @@ const Manipulation: React.FC = () => {
       const result: ApiResponse<any> = await response.json();
       if (result.success) {
         alert(`Manipulation ${enable ? 'enabled' : 'disabled'} successfully`);
-        await fetchData();
+        // await fetchData();
       } else {
         alert('Failed to toggle manipulation: ' + (result.message || 'Unknown error'));
       }
     } catch (err) {
       alert('Error toggling manipulation: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
-    setLoading(false);
+    // setLoading(false);
   };
 
-  // Fetch all data
-  const fetchData = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setError('');
-    await Promise.all([
-      fetchActiveGames(),
-      fetchBettingStats(),
-      fetchRecentResults()
-    ]);
-    setLastUpdated(new Date());
-    setLoading(false);
-  }, [fetchActiveGames, fetchBettingStats, fetchRecentResults]);
 
-  useEffect(() => {
-    fetchData();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
 
   useEffect(() => {
     if (selectedGame) {
@@ -210,7 +154,7 @@ const Manipulation: React.FC = () => {
     return new Date(date).toLocaleTimeString();
   };
 
-  const getStatusColor = (status: GameStatus): string => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'active': return 'text-green-600 bg-green-100';
       case 'betting': return 'text-blue-600 bg-blue-100';
@@ -235,22 +179,7 @@ const Manipulation: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Color Game Admin Dashboard</h1>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </p>
-            <button
-              onClick={fetchData}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        </div>
+     
 
         {error && (
           <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
@@ -260,29 +189,6 @@ const Manipulation: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Control Panel */}
-        <div className="mb-8 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Game Controls</h2>
-          <div className="flex gap-4">
-            <button
-              onClick={restartAllGames}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-            >
-              <Play className="w-4 h-4" />
-              Restart All Games
-            </button>
-            <button
-              onClick={forceEndAllGames}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-            >
-              <Square className="w-4 h-4" />
-              Force End All Games
-            </button>
-          </div>
-        </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -358,20 +264,20 @@ const Manipulation: React.FC = () => {
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
-                      <div>Started: {formatTime(game.startTime)}</div>
-                      <div>Ends: {formatTime(game.endTime)}</div>
+                      {/* <div>Started: {formatTime(game.end_time)}</div> */}
+                      <div>Ends: {formatTime(game.end_time)}</div>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
+                      {/* <span className="text-sm text-gray-600">
                         Manipulation: {game.isManipulated ? 'Enabled' : 'Disabled'}
-                      </span>
+                      </span> */}
                       <button
-                        onClick={() => toggleManipulation(game.id, !game.isManipulated)}
+                        onClick={() => toggleManipulation(game.id, false)}
                         disabled={loading}
                         className="flex items-center gap-1 text-sm"
                       >
-                        {game.isManipulated ? (
+                        {false ? (
                           <ToggleRight className="w-5 h-5 text-green-600" />
                         ) : (
                           <ToggleLeft className="w-5 h-5 text-gray-400" />
@@ -386,7 +292,7 @@ const Manipulation: React.FC = () => {
           </div>
 
           {/* Recent Results */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          {/* <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Recent Results</h2>
             <div className="space-y-3">
               {recentResults.length === 0 ? (
@@ -413,7 +319,7 @@ const Manipulation: React.FC = () => {
                 ))
               )}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Betting Statistics */}

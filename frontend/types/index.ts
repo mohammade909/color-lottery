@@ -2,6 +2,7 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  loading:boolean,
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -96,6 +97,7 @@ export interface User {
   email: string;
   wallet: number;
 }
+
 
 export interface AuthResponse {
   user: User;

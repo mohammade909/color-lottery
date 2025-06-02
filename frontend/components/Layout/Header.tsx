@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { disconnectSocket } from '@/lib/socket';
 
 interface User {
@@ -29,7 +29,7 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     // Clear local storage
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('auth-storage');
     
     // Disconnect socket
     disconnectSocket();
@@ -38,7 +38,7 @@ const Header: React.FC = () => {
     setUser(null);
     
     // Redirect to login page
-    router.push('/login');
+    router.push('/');
   };
 
   return (

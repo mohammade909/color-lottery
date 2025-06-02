@@ -47,7 +47,7 @@ const Wallet: React.FC<WalletProps> = () => {
       const transactionsData = await transactionAPI.getUserTransactions(
         userId ?? ""
       );
-        setTransactions(transactionsData);
+      setTransactions(transactionsData);
     } catch (err: any) {
       setError(err.message || "Failed to load wallet data");
       console.error("Error fetching wallet data:", err);
@@ -58,6 +58,7 @@ const Wallet: React.FC<WalletProps> = () => {
 
   useEffect(() => {
     fetchData();
+    getProfile(userId)
   }, [userId]);
 
   // Format currency
@@ -68,9 +69,8 @@ const Wallet: React.FC<WalletProps> = () => {
     }).format(amount);
   };
 
- 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg w-full p-6 mt-14">
       {isLoading ? (
         <div className="flex items-center justify-center h-40">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>

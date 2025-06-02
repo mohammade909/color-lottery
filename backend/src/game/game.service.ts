@@ -6,7 +6,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Connection} from 'typeorm';
+import { Repository, Connection } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { ColorGame } from './entities/color-game.entity';
 import { UserBet } from './entities/user-bet.entity';
@@ -30,6 +30,7 @@ import {
   ActivityStatDto,
 } from './dto/game-statistics.dto';
 import { Transaction } from 'src/users/entities/transaction.entity';
+import { User } from 'src/users/entities/user.entity';
 
 type GameFilterOptions = GameFilterOptionsDto;
 type GameStatistics = GameStatisticsDto;
@@ -123,6 +124,18 @@ export class GameService implements OnModuleInit {
     this.logger.log('All games started successfully');
   }
 
+  generateUniqueDigitPeriod() {
+    const getRandomDigit = () => Math.floor(Math.random() * 10);
+
+    let randomFour = '';
+    for (let i = 0; i < 4; i++) {
+      randomFour += getRandomDigit();
+    }
+
+    const result = `0000000${randomFour}`;
+    return result;
+  }
+
   async createGame(createGameDto: CreateGameDto): Promise<ColorGame> {
     const id = uuidv4();
     const now = new Date();
@@ -148,7 +161,7 @@ export class GameService implements OnModuleInit {
         break;
     }
 
-    const period = format(now, periodFormat);
+    const period = this.generateUniqueDigitPeriod();
 
     const game = this.colorGameRepository.create({
       id,
@@ -273,6 +286,132 @@ export class GameService implements OnModuleInit {
     return this.multipliers[betType][betValue];
   }
 
+  // async endGame(gameId: string): Promise<void> {
+  //   const game = await this.colorGameRepository.findOne({
+  //     where: { id: gameId, active: true },
+  //   });
+
+  //   if (!game) {
+  //     this.logger.warn(`Game ${gameId} not found or already ended`);
+  //     return;
+  //   }
+
+  //   // Generate random result
+  //   const result = this.generateGameResult();
+
+  //   // Save result
+  //   const gameResult = this.gameResultRepository.create({
+  //     period_id: gameId,
+  //     number: result.number,
+  //     color: result.color,
+  //     size: result.size,
+  //     description: `Game ${game.period} ended with number ${result.number}, color ${result.color}, size ${result.size}`,
+  //   });
+
+  //   // Initialize these variables as undefined
+  //   let savedResult: GameResult | undefined;
+  //   let newGame: ColorGame | undefined;
+
+  //   await this.connection.transaction(async (manager) => {
+  //     // Save the result
+  //     savedResult = await manager.save(gameResult);
+
+  //     // Process all bets for this game
+  //     const bets = await this.userBetRepository.find({
+  //       where: { period_id: gameId },
+  //     });
+
+  //     for (const bet of bets) {
+  //       const isWin = this.checkWin(bet, result);
+  //       const winAmount = isWin ? bet.total_amount : 0;
+
+  //       await manager.update(
+  //         UserBet,
+  //         { id: bet.id },
+  //         {
+  //           result: isWin ? 'win' : 'lose',
+  //           win_amount: winAmount,
+  //         },
+  //       );
+
+  //       // Here you would also update the user's balance
+  //       // This depends on your user/wallet implementation
+  //     }
+
+  //     // Mark game as inactive
+  //     await manager.update(ColorGame, { id: gameId }, { active: false });
+
+  //     // Start a new game of the same duration
+  //     newGame = await this.createGame({
+  //       duration: game.duration as GameDuration,
+  //     });
+  //     this.logger.log(
+  //       `Started new ${game.duration} game with ID: ${newGame.id}`,
+  //     );
+  //   });
+
+  //   // Notify through WebSocket
+  //   await this.resolveGateway();
+
+  //   if (this.colorGameGateway && savedResult && newGame) {
+  //     // Send result with completed game data and processed bets
+  //     const fullGameData = {
+  //       ...game,
+  //       result: savedResult,
+  //       newGameId: newGame.id,
+  //     };
+
+  //     // Emit the result through the gateway
+  //     await this.colorGameGateway.emitGameResult(gameId, fullGameData);
+  //   }
+
+  //   // Clean up scheduler
+  //   try {
+  //     this.schedulerRegistry.deleteTimeout(`game-${gameId}`);
+  //   } catch (error) {
+  //     this.logger.error(`Error removing game timeout: ${error.message}`);
+  //   }
+  // }
+
+  // private generateGameResult(): {
+  //   number: number;
+  //   color: ColorValue;
+  //   size: SizeValue;
+  // } {
+  //   const number = Math.floor(Math.random() * 10); // 0-9
+
+  //   // Determine color based on number
+  //   let color: ColorValue;
+  //   if (number === 0) {
+  //     color = ColorValue.GREEN;
+  //   } else if (number % 2 === 0) {
+  //     color = ColorValue.RED;
+  //   } else {
+  //     color = ColorValue.BLACK;
+  //   }
+
+  //   // Determine size
+  //   const size = number > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+  //   return { number, color, size };
+  // }
+
+  // private checkWin(
+  //   bet: UserBet,
+  //   result: { number: number; color: string; size: string },
+  // ): boolean {
+  //   switch (bet.bet_type) {
+  //     case BetType.COLOR:
+  //       return bet.bet_value === result.color;
+  //     case BetType.NUMBER:
+  //       return parseInt(bet.bet_value) === result.number;
+  //     case BetType.SIZE:
+  //       return bet.bet_value === result.size;
+  //     default:
+  //       return false;
+  //   }
+  // }
+
   async endGame(gameId: string): Promise<void> {
     const game = await this.colorGameRepository.findOne({
       where: { id: gameId, active: true },
@@ -283,8 +422,8 @@ export class GameService implements OnModuleInit {
       return;
     }
 
-    // Generate random result
-    const result = this.generateGameResult();
+    // Calculate total bets and generate strategic result
+    const result = await this.generateStrategicResult(gameId);
 
     // Save result
     const gameResult = this.gameResultRepository.create({
@@ -293,9 +432,9 @@ export class GameService implements OnModuleInit {
       color: result.color,
       size: result.size,
       description: `Game ${game.period} ended with number ${result.number}, color ${result.color}, size ${result.size}`,
+      duration: game.duration,
     });
 
-    // Initialize these variables as undefined
     let savedResult: GameResult | undefined;
     let newGame: ColorGame | undefined;
 
@@ -310,7 +449,49 @@ export class GameService implements OnModuleInit {
 
       for (const bet of bets) {
         const isWin = this.checkWin(bet, result);
-        const winAmount = isWin ? bet.total_amount : 0;
+
+        let winAmount = 0;
+        if (isWin) {
+          const betAmount = parseFloat(bet.total_amount?.toString() || '0');
+          const grossWinAmount = betAmount * 2;
+          const fee = grossWinAmount * 0.1;
+          winAmount = grossWinAmount - fee;
+
+          this.logger.log(
+            `Calculating win for bet ${bet.id}: betAmount=${betAmount}, grossWin=${grossWinAmount}, fee=${fee}, netWin=${winAmount}`,
+          );
+
+          const user = await manager.findOne(User, {
+            where: { id: bet.user_id },
+          });
+          if (!user) {
+            this.logger.error(
+              `User ${bet.user_id} not found for bet ${bet.id}`,
+            );
+            continue;
+          }
+
+          const oldBalance = parseFloat(user.wallet?.toString() || '0');
+          this.logger.log(`User ${bet.user_id} current balance: ${oldBalance}`);
+
+          await manager
+            .createQueryBuilder()
+            .update(User)
+            .set({
+              wallet: () => `wallet + ${winAmount}`,
+            })
+            .where('id = :userId', { userId: bet.user_id })
+            .execute();
+
+          const updatedUser = await manager.findOne(User, {
+            where: { id: bet.user_id },
+          });
+          const newBalance = parseFloat(updatedUser?.wallet?.toString() || '0');
+
+          this.logger.log(
+            `User ${bet.user_id} balance updated: ${oldBalance} -> ${newBalance} (+${winAmount})`,
+          );
+        }
 
         await manager.update(
           UserBet,
@@ -320,9 +501,6 @@ export class GameService implements OnModuleInit {
             win_amount: winAmount,
           },
         );
-
-        // Here you would also update the user's balance
-        // This depends on your user/wallet implementation
       }
 
       // Mark game as inactive
@@ -341,14 +519,12 @@ export class GameService implements OnModuleInit {
     await this.resolveGateway();
 
     if (this.colorGameGateway && savedResult && newGame) {
-      // Send result with completed game data and processed bets
       const fullGameData = {
         ...game,
         result: savedResult,
         newGameId: newGame.id,
       };
 
-      // Emit the result through the gateway
       await this.colorGameGateway.emitGameResult(gameId, fullGameData);
     }
 
@@ -360,27 +536,214 @@ export class GameService implements OnModuleInit {
     }
   }
 
-  private generateGameResult(): {
+  private async generateStrategicResult(gameId: string): Promise<{
     number: number;
     color: ColorValue;
     size: SizeValue;
-  } {
-    const number = Math.floor(Math.random() * 10); // 0-9
+  }> {
+    // Get all bets for this game
+    const bets = await this.userBetRepository.find({
+      where: { period_id: gameId },
+    });
 
-    // Determine color based on number
-    let color: ColorValue;
-    if (number === 0) {
-      color = ColorValue.GREEN;
-    } else if (number % 2 === 0) {
-      color = ColorValue.RED;
-    } else {
-      color = ColorValue.BLACK;
+    // Calculate total amounts for each bet type
+    const betAnalysis = this.analyzeBets(bets);
+
+    // Find the option with minimum total bet amount for each category
+    const winningColor = this.findMinBetOption(betAnalysis.colorBets);
+    const winningSize = this.findMinBetOption(betAnalysis.sizeBets);
+    const winningNumber = this.findMinBetOption(betAnalysis.numberBets);
+
+    // Generate a number that matches our strategic requirements
+    const strategicNumber = this.generateStrategicNumber(
+      winningColor,
+      winningSize,
+      winningNumber,
+    );
+
+    // Get color and size based on the strategic number
+    const color = this.getColorForNumber(strategicNumber);
+    const size = strategicNumber > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+    this.logger.log(
+      `Strategic result for game ${gameId}: Number=${strategicNumber}, Color=${color}, Size=${size}`,
+    );
+    this.logger.log(`Bet analysis: ${JSON.stringify(betAnalysis)}`);
+
+    return {
+      number: strategicNumber,
+      color,
+      size,
+    };
+  }
+
+  private analyzeBets(bets: UserBet[]): {
+    colorBets: Record<string, number>;
+    sizeBets: Record<string, number>;
+    numberBets: Record<string, number>;
+  } {
+    const colorBets: Record<string, number> = {
+      [ColorValue.RED]: 0,
+      [ColorValue.GREEN]: 0,
+      [ColorValue.BLACK]: 0,
+    };
+
+    const sizeBets: Record<string, number> = {
+      [SizeValue.BIG]: 0,
+      [SizeValue.SMALL]: 0,
+    };
+
+    const numberBets: Record<string, number> = {};
+
+    // Initialize number bets
+    for (let i = 0; i <= 9; i++) {
+      numberBets[i.toString()] = 0;
     }
 
-    // Determine size
-    const size = number > 4 ? SizeValue.BIG : SizeValue.SMALL;
+    // Calculate total bet amounts for each category
+    bets.forEach((bet) => {
+      switch (bet.bet_type) {
+        case BetType.COLOR:
+          colorBets[bet.bet_value] =
+            (colorBets[bet.bet_value] || 0) + bet.total_amount;
+          break;
+        case BetType.SIZE:
+          sizeBets[bet.bet_value] =
+            (sizeBets[bet.bet_value] || 0) + bet.total_amount;
+          break;
+        case BetType.NUMBER:
+          numberBets[bet.bet_value] =
+            (numberBets[bet.bet_value] || 0) + bet.total_amount;
+          break;
+      }
+    });
 
-    return { number, color, size };
+    return { colorBets, sizeBets, numberBets };
+  }
+
+  private findMinBetOption(betAmounts: Record<string, number>): string {
+    let minAmount = Infinity;
+    let minOption = '';
+
+    Object.entries(betAmounts).forEach(([option, amount]) => {
+      if (amount < minAmount) {
+        minAmount = amount;
+        minOption = option;
+      }
+    });
+
+    return minOption;
+  }
+
+  private generateStrategicNumber(
+    targetColor: string,
+    targetSize: string,
+    targetNumber: string,
+  ): number {
+    // Priority 1: If a specific number has minimum bets, use it
+    const numberValue = parseInt(targetNumber);
+    if (!isNaN(numberValue) && numberValue >= 0 && numberValue <= 9) {
+      const numberColor = this.getColorForNumber(numberValue);
+      const numberSize = numberValue > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+      // Check if this number also satisfies color and size requirements
+      if (numberColor === targetColor && numberSize === targetSize) {
+        return numberValue;
+      }
+    }
+
+    // Priority 2: Find a number that matches both color and size preferences
+    const possibleNumbers = this.getNumbersForColorAndSize(
+      targetColor,
+      targetSize,
+    );
+
+    if (possibleNumbers.length > 0) {
+      // Return the first number that matches both color and size
+      return possibleNumbers[0];
+    }
+
+    // Priority 3: Prefer color over size if no perfect match
+    const numbersForColor = this.getNumbersForColor(targetColor);
+    if (numbersForColor.length > 0) {
+      return numbersForColor[0];
+    }
+
+    // Priority 4: Use size preference
+    const numbersForSize = this.getNumbersForSize(targetSize);
+    if (numbersForSize.length > 0) {
+      return numbersForSize[0];
+    }
+
+    // Fallback: random number (should rarely happen)
+    return Math.floor(Math.random() * 10);
+  }
+
+  private getNumbersForColorAndSize(color: string, size: string): number[] {
+    const numbers: number[] = [];
+
+    for (let i = 0; i <= 9; i++) {
+      const numberColor = this.getColorForNumber(i);
+      const numberSize = i > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+      if (numberColor === color && numberSize === size) {
+        numbers.push(i);
+      }
+    }
+
+    return numbers;
+  }
+
+  private getNumbersForColor(color: string): number[] {
+    const numbers: number[] = [];
+
+    for (let i = 0; i <= 9; i++) {
+      if (this.getColorForNumber(i) === color) {
+        numbers.push(i);
+      }
+    }
+
+    return numbers;
+  }
+
+  private getNumbersForSize(size: string): number[] {
+    const numbers: number[] = [];
+
+    for (let i = 0; i <= 9; i++) {
+      const numberSize = i > 4 ? SizeValue.BIG : SizeValue.SMALL;
+      if (numberSize === size) {
+        numbers.push(i);
+      }
+    }
+
+    return numbers;
+  }
+
+  private getColorForNumber(number: number): ColorValue {
+    if (number === 0 || number === 5) {
+      // For 0 and 5, you might want to implement additional logic
+      // to choose between red and green based on bet amounts
+      return Math.random() < 0.5 ? ColorValue.RED : ColorValue.GREEN;
+    } else if (number % 2 === 0) {
+      // Even numbers (2, 4, 6, 8) are red
+      return ColorValue.RED;
+    } else {
+      // Odd numbers (1, 3, 7, 9) are green
+      return ColorValue.GREEN;
+    }
+  }
+
+  // Enhanced method to handle 0 and 5 strategically
+  private getStrategicColorForSpecialNumber(
+    number: number,
+    targetColor: string,
+  ): ColorValue {
+    if (number === 0 || number === 5) {
+      // Return the color that has minimum bets
+      return targetColor as ColorValue;
+    }
+
+    return this.getColorForNumber(number);
   }
 
   private checkWin(
@@ -398,6 +761,8 @@ export class GameService implements OnModuleInit {
         return false;
     }
   }
+
+  // Additional utility method to get comprehensive game statistics
 
   async getActiveGames(): Promise<ColorGame[]> {
     return this.colorGameRepository.find({
@@ -433,13 +798,26 @@ export class GameService implements OnModuleInit {
     });
   }
 
-  async getRecentResults(limit: number = 10): Promise<GameResult[]> {
-    return this.gameResultRepository.find({
-      order: { timestamp: 'DESC' },
-      take: limit,
-      relations: ['game'], // This will populate the game relation
-    });
+  async getRecentResults(
+    limit: number = 10,
+    duration?: string,
+  ): Promise<GameResult[]> {
+    const queryBuilder = this.gameResultRepository
+      .createQueryBuilder('gameResult')
+      .leftJoinAndSelect('gameResult.game', 'game')
+      .orderBy('gameResult.timestamp', 'DESC')
+      .take(limit);
+
+    // Filter by game duration if provided
+    if (duration !== undefined && duration !== null && duration.trim() !== '') {
+      queryBuilder.where('game.duration = :duration', {
+        duration: duration.trim(),
+      });
+    }
+
+    return queryBuilder.getMany();
   }
+
   async getTransactions(): Promise<Transaction[]> {
     return this.transactionRepository.find();
   }
@@ -454,6 +832,7 @@ export class GameService implements OnModuleInit {
       await this.endGame(game.id);
     }
   }
+
   async getAllGamesForAdmin(options: GameFilterOptions): Promise<ColorGame[]> {
     const queryBuilder = this.colorGameRepository
       .createQueryBuilder('game')

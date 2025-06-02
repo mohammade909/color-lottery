@@ -4,7 +4,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ColorGameModule } from './color-game/color-game.module';
 import { TransactionsModule } from './transactions/transactions.module';
-// import { GameModule } from './game/game.module';
+import { GameModule } from './game/game.module';
+import { CoinModule } from './coin-flip/coin.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { TransactionsModule } from './transactions/transactions.module';
     UsersModule,
     ColorGameModule,
     TransactionsModule,
-    // GameModule,
+    GameModule,
+    CoinModule
 
   ],
 })

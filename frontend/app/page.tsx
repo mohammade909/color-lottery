@@ -18,7 +18,7 @@ export default function Home() {
     }
   }, [searchParams]);
 
-  console.log(user);
+
 
   useEffect(() => {
     console.log("Redirect useEffect triggered:", { isAuthenticated, user });

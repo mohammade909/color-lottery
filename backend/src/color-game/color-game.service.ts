@@ -597,29 +597,6 @@ export interface GameAnalysisResponse {
 @Injectable()
 export class ColorGameService implements OnModuleInit {
   private readonly logger = new Logger(ColorGameService.name);
-  private readonly multipliers = {
-    color: {
-      red: 2,
-      green: 14,
-      black: 2,
-    },
-    number: {
-      '0': 9,
-      '1': 9,
-      '2': 9,
-      '3': 9,
-      '4': 9,
-      '5': 9,
-      '6': 9,
-      '7': 9,
-      '8': 9,
-      '9': 9,
-    },
-    size: {
-      big: 2,
-      small: 2,
-    },
-  };
 
   constructor(
     @InjectRepository(ColorGame)
@@ -649,10 +626,10 @@ export class ColorGameService implements OnModuleInit {
       .execute();
 
     // Start each type of game
-    await this.createGame({ duration: GameDuration.THIRTY_SECONDS });
-    await this.createGame({ duration: GameDuration.ONE_MINUTE });
-    await this.createGame({ duration: GameDuration.THREE_MINUTES });
-    await this.createGame({ duration: GameDuration.FIVE_MINUTES });
+    // await this.createGame({ duration: GameDuration.THIRTY_SECONDS });
+    // await this.createGame({ duration: GameDuration.ONE_MINUTE });
+    // await this.createGame({ duration: GameDuration.THREE_MINUTES });
+    // await this.createGame({ duration: GameDuration.FIVE_MINUTES });
 
     this.logger.log('All games started successfully');
   }
@@ -825,157 +802,6 @@ export class ColorGameService implements OnModuleInit {
     }
   }
 
-  // async endGame(gameId: string): Promise<void> {
-  //   const game = await this.colorGameRepository.findOne({
-  //     where: { id: gameId, active: true },
-  //   });
-
-  //   if (!game) {
-  //     this.logger.warn(`Game ${gameId} not found or already ended`);
-  //     return;
-  //   }
-
-  //   // Get all bets for analysis
-  //   const bets = await this.userBetRepository.find({
-  //     where: { period_id: gameId },
-  //   });
-
-  //   this.logger.log(`Processing ${bets.length} bets for game ${gameId}`);
-
-  //   // Analyze betting patterns and generate manipulated result
-  //   const result = await this.generateManipulatedResult(bets);
-  //   this.logger.log(`Generated result: ${JSON.stringify(result)}`);
-
-  //   // Save result
-  //   const gameResult = this.gameResultRepository.create({
-  //     period_id: gameId,
-  //     number: result.number,
-  //     color: result.color,
-  //     size: result.size,
-  //     description: `Game ${game.period} ended with number ${result.number}, color ${result.color}, size ${result.size}`,
-  //     duration: game.duration,
-  //   });
-
-  //   await this.connection.transaction(async (manager) => {
-  //     // Save the result
-  //     await manager.save(gameResult);
-  //     this.logger.log(`Game result saved for game ${gameId}`);
-
-  //     // Process all bets for this game
-  //     for (const bet of bets) {
-  //       const isWin = this.checkWin(bet, result);
-  //       this.logger.log(
-  //         `Bet ${bet.id} - User: ${bet.user_id}, Amount: ${bet.total_amount}, Win: ${isWin}`,
-  //       );
-
-  //       let winAmount = 0;
-  //       if (isWin) {
-  //         // Ensure bet.total_amount is a number
-  //         const betAmount = parseFloat(bet.total_amount?.toString() || '0');
-
-  //         // Calculate win amount: bet * 2 minus 10% fee
-  //         const grossWinAmount = betAmount * 2;
-  //         const fee = grossWinAmount * 0.1; // 10% fee
-  //         winAmount = grossWinAmount - fee;
-
-  //         this.logger.log(
-  //           `Calculating win for bet ${bet.id}: betAmount=${betAmount}, grossWin=${grossWinAmount}, fee=${fee}, netWin=${winAmount}`,
-  //         );
-
-  //         // Get the user first to check current balance
-  //         const user = await manager.findOne(User, {
-  //           where: { id: bet.user_id },
-  //         });
-  //         if (!user) {
-  //           this.logger.error(
-  //             `User ${bet.user_id} not found for bet ${bet.id}`,
-  //           );
-  //           continue;
-  //         }
-
-  //         const oldBalance = parseFloat(user.wallet?.toString() || '0');
-  //         this.logger.log(`User ${bet.user_id} current balance: ${oldBalance}`);
-
-  //         // Update user balance using query builder for better control
-  //         await manager
-  //           .createQueryBuilder()
-  //           .update(User)
-  //           .set({
-  //             wallet: () => `wallet + ${winAmount}`,
-  //           })
-  //           .where('id = :userId', { userId: bet.user_id })
-  //           .execute();
-
-  //         // Verify the update
-  //         const updatedUser = await manager.findOne(User, {
-  //           where: { id: bet.user_id },
-  //         });
-  //         const newBalance = parseFloat(updatedUser?.wallet?.toString() || '0');
-
-  //         this.logger.log(
-  //           `User ${bet.user_id} balance updated: ${oldBalance} -> ${newBalance} (+${winAmount})`,
-  //         );
-
-  //         this.logger.log(
-  //           `User ${bet.user_id} won ${winAmount} (gross: ${grossWinAmount}, fee: ${fee}) from bet ${bet.id}`,
-  //         );
-  //       }
-
-  //       // Update bet record
-  //       await manager.update(
-  //         UserBet,
-  //         { id: bet.id },
-  //         {
-  //           result: isWin ? 'win' : 'lose',
-  //           win_amount: winAmount,
-  //         },
-  //       );
-
-  //       this.logger.log(
-  //         `Updated bet ${bet.id} with result: ${isWin ? 'win' : 'lose'}, win_amount: ${winAmount}`,
-  //       );
-  //     }
-
-  //     // Mark game as inactive
-  //     await manager.update(ColorGame, { id: gameId }, { active: false });
-  //     this.logger.log(`Game ${gameId} marked as inactive`);
-
-  //     // Start a new game of the same duration
-  //     const newGame = await this.createGame({
-  //       duration: game.duration as GameDuration,
-  //     });
-  //     this.logger.log(
-  //       `Started new ${game.duration} game with ID: ${newGame.id}`,
-  //     );
-  //   });
-
-  //   // Clean up scheduler
-  //   try {
-  //     this.schedulerRegistry.deleteTimeout(`game-${gameId}`);
-  //     this.logger.log(`Cleaned up scheduler for game ${gameId}`);
-  //   } catch (error) {
-  //     this.logger.error(`Error removing game timeout: ${error.message}`);
-  //   }
-  // }
-
-  // private async generateManipulatedResult(bets: UserBet[]): Promise<{
-  //   number: number;
-  //   color: ColorValue;
-  //   size: SizeValue;
-  // }> {
-  //   // Analyze betting patterns
-  //   const analysis = this.analyzeBettingPatterns(bets);
-
-  //   this.logger.log('Betting Analysis:', JSON.stringify(analysis, null, 2));
-
-  //   // Generate result that minimizes payouts
-  //   const manipulatedResult = this.selectOptimalResult(analysis);
-
-  //   this.logger.log(`Manipulated result: ${JSON.stringify(manipulatedResult)}`);
-
-  //   return manipulatedResult;
-  // }
-
   private analyzeBettingPatterns(bets: UserBet[]): BettingAnalysis {
     const numberBets: { [key: number]: number } = {};
     const colorBets: { [key: string]: number } = {};
@@ -1065,99 +891,7 @@ export class ColorGameService implements OnModuleInit {
       mostBetColor,
       mostBetSize,
     };
-  }
-
-  // private selectOptimalResult(analysis: BettingAnalysis): {
-  //   number: number;
-  //   color: ColorValue;
-  //   size: SizeValue;
-  // } {
-  //     const leastBetNumbers = Object.entries(analysis.numberBets)
-  //     .sort(([, a], [, b]) => (a as number) - (b as number))
-  //     .slice(0, 3) // Get 3 least bet numbers
-  //     .map(([num]) => parseInt(num));
-
-  //   // Select a number from least bet numbers (with some randomness to avoid patterns)
-  //   const selectedNumber =
-  //     leastBetNumbers[Math.floor(Math.random() * leastBetNumbers.length)];
-
-  //   // Determine color based on game rules but consider bet analysis
-  //   let selectedColor: ColorValue;
-  //   if (selectedNumber === 0 || selectedNumber === 5) {
-  //     // 0 and 5 can be both red and green, choose the less bet color
-  //     selectedColor =
-  //       analysis.colorBets[ColorValue.RED] >
-  //       analysis.colorBets[ColorValue.GREEN]
-  //         ? ColorValue.GREEN
-  //         : ColorValue.RED;
-  //   } else {
-  //     // Follow normal color rules but check if we need to manipulate
-  //     if (selectedNumber % 2 === 0) {
-  //       selectedColor = ColorValue.RED;
-  //     } else {
-  //       selectedColor = ColorValue.GREEN;
-  //     }
-  //   }
-
-  //   // Determine size based on game rules
-  //   const selectedSize = selectedNumber < 5 ? SizeValue.SMALL : SizeValue.BIG;
-
-  //   // Log manipulation decision
-  //   this.logger.log(`Manipulation Decision:
-  //     - Avoided most bet number: ${analysis.mostBetNumber} (${analysis.numberBets[analysis.mostBetNumber]} amount)
-  //     - Selected number: ${selectedNumber} (${analysis.numberBets[selectedNumber]} amount)
-  //     - Most bet color: ${analysis.mostBetColor} (${analysis.colorBets[analysis.mostBetColor]} amount)
-  //     - Selected color: ${selectedColor}
-  //     - Most bet size: ${analysis.mostBetSize} (${analysis.sizeBets[analysis.mostBetSize]} amount)
-  //     - Selected size: ${selectedSize}
-  //   `);
-
-  //   return {
-  //     number: selectedNumber,
-  //     color: selectedColor,
-  //     size: selectedSize,
-  //   };
-  // }
-  // async toggleManipulation(
-  //   gameId: string,
-  //   useManipulation: boolean = true,
-  // ): Promise<{
-  //   message: string;
-  //   gameId: string;
-  //   manipulationEnabled: boolean;
-  // }> {
-  //   // This could be stored in a configuration table or cache
-  //   // For now, we'll just return the status
-  //   return {
-  //     message: `Manipulation ${useManipulation ? 'enabled' : 'disabled'} for game ${gameId}`,
-  //     gameId,
-  //     manipulationEnabled: useManipulation,
-  //   };
-  // }
-
-  // Original random generation method (kept for reference/testing)
-  // private generateGameResult(): {
-  //   number: number;
-  //   color: ColorValue;
-  //   size: SizeValue;
-  // } {
-  //   const number = Math.floor(Math.random() * 10); // 0-9
-
-  //   // Determine color based on number
-  //   let color: ColorValue;
-  //   if (number === 0) {
-  //     color = ColorValue.GREEN;
-  //   } else if (number % 2 === 0) {
-  //     color = ColorValue.RED;
-  //   } else {
-  //     color = ColorValue.BLACK;
-  //   }
-
-  //   // Determine size
-  //   const size = number > 4 ? SizeValue.BIG : SizeValue.SMALL;
-
-  //   return { number, color, size };
-  // }
+  }  
 
   // Add this property to your service class
   private manipulationEnabled: Map<string, boolean> = new Map();
@@ -1180,7 +914,7 @@ export class ColorGameService implements OnModuleInit {
     this.logger.log(`Processing ${bets.length} bets for game ${gameId}`);
 
     // Check if manipulation is enabled for this game
-    const useManipulation = this.manipulationEnabled.get(gameId) ?? true; // Default to true
+    const useManipulation = this.globalManipulationEnabled; // Default to true
 
     // Generate result based on manipulation setting
     const result = useManipulation
