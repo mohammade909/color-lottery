@@ -7,6 +7,7 @@ export const useAuth = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      loading:false,
       isAuthenticated: false,
       login: (token: string, user: User) => 
         set({ token, user, isAuthenticated: true }),

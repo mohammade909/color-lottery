@@ -304,8 +304,8 @@ export const authAPI = {
     });
     return response.data;
   },
-  getProfile: async (id: string) => {
-    const response = await api.get(`/users/${id}`);
+  getProfile: async () => {
+    const response = await api.get(`/users/profile`);
     return response.data;
   },
 };

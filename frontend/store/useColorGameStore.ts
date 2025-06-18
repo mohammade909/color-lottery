@@ -95,6 +95,7 @@ interface ColorGameState {
   handleRefresh: () => void;
   selectGame: (game: Game) => void;
   selectBetType: (betType: BetType) => void;
+  clearBetSelection: () => void;
   selectMultiplier: (multiplier: number) => void;
   selectBetValue: (value: string) => void;
   setBetAmount: (amount: number) => void;
@@ -178,6 +179,9 @@ const useColorGameStore = create<ColorGameState>((set, get) => ({
   },
   selectBetType: (betType: BetType) => {
     set({ selectedBetType: betType, selectedBetValue: null });
+  },
+  clearBetSelection: () => {
+    set({ selectedBetType: null, selectedBetValue: null });
   },
 
   selectBetValue: (value: string) => {

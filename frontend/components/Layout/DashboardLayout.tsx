@@ -10,7 +10,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 overflow-auto">
         <div className="">

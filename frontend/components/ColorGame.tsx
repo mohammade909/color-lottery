@@ -21,19 +21,12 @@ const ColorGame = () => {
     }
   }, [fetchUserBets, setupSocketListeners]);
   return (
-    <div className="p-6 flex gap-4">
-      <div className="w-[63%]">
-        <h1 className="text-2xl font-bold mb-6">Color Game</h1>
-        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-          <GameTabs />
-        </div>
-        <Game />
-        <div className="mt-6 bg-white shadow-md rounded-lg p-6">
-          <UserBets />
-        </div>
-      </div>
-      <div className="w-[33%]">
-        <Wallet />
+    <div className=" bg-gray-900 p-6">
+      <Wallet />
+      <GameTabs />
+      <Game />
+      <div className="mt-6  bg-gray-800 shadow-md rounded-md">
+        <UserBets />
       </div>
     </div>
   );

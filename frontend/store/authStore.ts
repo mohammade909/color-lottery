@@ -46,8 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   getProfile: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const user = await authAPI.getProfile(id);
-      console.log(user)
+      const user = await authAPI.getProfile();
       set({ user, loading: false }); // Update the user in state
     } catch (error: any) {
       set({

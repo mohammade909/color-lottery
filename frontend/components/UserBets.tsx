@@ -1,6 +1,6 @@
-'use client'
-import React, { useEffect, useState } from 'react';
-import useColorGameStore, { UserBet } from '@/store/useColorGameStore';
+"use client";
+import React, { useEffect, useState } from "react";
+import useColorGameStore, { UserBet } from "@/store/useColorGameStore";
 
 const UserBets: React.FC = () => {
   const { userBets, fetchUserBets, loading, error } = useColorGameStore();
@@ -18,15 +18,14 @@ const UserBets: React.FC = () => {
         console.error("Error fetching user bets:", err);
       }
     };
-    
+
     fetchData();
-    
+
     // Note: userBets is intentionally not in the dependency array
     // as it would cause an infinite loop
   }, [fetchUserBets]);
 
   // For debugging - show the current state
-
 
   if (loading) {
     return (
@@ -55,53 +54,65 @@ const UserBets: React.FC = () => {
       <div className="mt-6">
         <h3 className="text-lg font-medium mb-4">Your Bets</h3>
         <div className="bg-gray-100 rounded-md p-4 text-center text-gray-600">
-          {debugInfo.fetched ? "You haven't placed any bets yet" : "Waiting for bet data..."}
+          {debugInfo.fetched
+            ? "You haven't placed any bets yet"
+            : "Waiting for bet data..."}
         </div>
       </div>
     );
   }
-  
+
   // Style for bet result
   const getBetResultStyle = (bet: UserBet) => {
-    if (!bet.result) return 'bg-gray-100 text-gray-600';
-    return bet.result === 'win' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
+    if (!bet.result) return "bg-gray-100 text-gray-600";
+    return bet.result === "win"
+      ? "bg-green-100 text-green-800"
+      : "bg-red-100 text-red-800";
   };
-  
+
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-medium mb-4">Your Bets</h3>
-      <div className="bg-white shadow overflow-hidden rounded-md">
+    <div className="mt-6 p-4">
+      <h3 className="text-base text-white font-medium mb-3 ">Your Bets</h3>
+      <div className="bg-gray-800 shadow overflow-hidden rounded-md">
         <ul className="divide-y divide-gray-200">
           {userBets.slice(0, 10).map((bet) => {
             const date = new Date(bet.timestamp);
             const formattedDate = date.toLocaleString();
-            
+
             return (
-              <li key={bet.id} className="px-4 py-4">
+              <li key={bet.id} className="px-4 py-4 bg-[#c5871d]">
                 <div className="flex flex-col sm:flex-row sm:justify-between">
-                  <div className="mb-2 sm:mb-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {bet.bet_type.charAt(0).toUpperCase() + bet.bet_type.slice(1)}: {bet.bet_value}
+                  <div className="mb-2 sm:mb-0 flex items-center justify-between">
+                    <p className="text-sm font-medium  text-gray-300">
+                      {bet.bet_type.charAt(0).toUpperCase() +
+                        bet.bet_type.slice(1)}{" "}
+                      <span className="bg-green-800 py-1 px-4 rounded-full">
+                        {" "}
+                        {bet.bet_value}
+                      </span>
                     </p>
-                    <p className="text-xs text-gray-500">{bet.period}</p>
+                    <p className="text-xs text-gray-300 bg-pink-600 rounded-full py-1 px-3">
+                      {bet.period}
+                    </p>
                   </div>
-                  
+
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-300">
                       Amount: <span className="font-medium">{bet.amount}</span>
                     </span>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-300">
                       x{bet.multiplier}
                     </span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getBetResultStyle(bet)}`}>
-                      {!bet.result 
-                        ? 'Pending' 
-                        : bet.result === 'win' 
-                          ? `Won ${bet.win_amount}` 
-                          : 'Lost'
-                      }
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getBetResultStyle(
+                        bet
+                      )}`}
+                    >
+                      {!bet.result
+                        ? "Pending"
+                        : bet.result === "win"
+                        ? `Won ${bet.win_amount}`
+                        : "Lost"}
                     </span>
                   </div>
                 </div>

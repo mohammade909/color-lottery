@@ -1,147 +1,31 @@
-// "use client";
-// import React, { useEffect } from "react";
-// import useColorGameStore, { GameDuration } from "@/store/useColorGameStore";
-// import GameTimer from "./GameTimer";
-// import { useAuth } from "@/hooks/useAuth";
-// import { useAuthStore } from "@/store/authStore";
-// import { ColorGame } from "@/types";
-// import Wallet from "./Wallet";
-
-// const GameTabs: React.FC = () => {
-//   const { activeGames, selectedGame, selectGame, fetchActiveGames, handleRefresh } =
-//     useColorGameStore();
-//   const { user, isAuthenticated } = useAuth();
-//   const { user: profile, getProfile } = useAuthStore();
-
-//   useEffect(() => {
-//     if (isAuthenticated && user) {
-//       const userId = user?.id; // You'll need to implement this
-//       if (userId) {
-//         getProfile(userId);
-//       }
-//     }
-//   }, [isAuthenticated, user, getProfile]);
-//   // Initial fetch of active games if needed
-//   useEffect(() => {
-//     if (Object.keys(activeGames).length === 0) {
-//       fetchActiveGames();
-//     }
-//   }, [activeGames, fetchActiveGames]);
-
-//   const tabs = [
-//     { id: GameDuration.THIRTY_SECONDS, label: "30 Seconds" },
-//     { id: GameDuration.ONE_MINUTE, label: "1 Minute" },
-//     { id: GameDuration.THREE_MINUTES, label: "3 Minutes" },
-//     { id: GameDuration.FIVE_MINUTES, label: "5 Minutes" },
-//   ];
-
-//   const handleGameTimerFinish = () => {
-//     // Refresh games when a timer finishes
-//     fetchActiveGames();
-//     handleRefresh()
-
-//     // If the current game finished, potentially select another active game
-//     if (selectedGame) {
-//       const nextActiveGameKey = Object.keys(activeGames).find(
-//         (key) => key !== selectedGame.duration && activeGames[key]
-//       );
-
-//       if (nextActiveGameKey) {
-//         selectGame(activeGames[nextActiveGameKey]);
-//       }
-//     }
-//   };
-
-//   const handleSelectGame = (duration: string) => {
-//     const game = activeGames[duration];
-//     if (game) {
-//       selectGame(game);
-//     }
-//   };
-
-//   return (
-//     <div className="w-full">
-//       <div className="border-b border-gray-200">
-//         <nav className="-mb-px flex" aria-label="Tabs">
-//           {tabs.map((tab) => {
-//             const isActive = selectedGame?.duration === tab.id;
-//             const game = activeGames[tab.id];
-
-//             return (
-//               <button
-//                 key={tab.id}
-//                 onClick={() => handleSelectGame(tab.id)}
-//                 className={`w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm ${
-//                   isActive
-//                     ? "border-blue-500 text-blue-600"
-//                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-//                 }`}
-//                 aria-current={isActive ? "page" : undefined}
-//                 disabled={!game} // Disable button if no active game for this duration
-//               >
-//                 {tab.label}
-//               </button>
-//             );
-//           })}
-//         </nav>
-//       </div>
-
-//       {selectedGame && (
-//         <div className="mt-4">
-//           {/* Key prop ensures re-render when game changes */}
-//           <GameTimer
-//             key={selectedGame.id || selectedGame.duration}
-//             endTime={selectedGame.end_time}
-//             game={selectedGame as ColorGame}
-//             onFinish={handleGameTimerFinish}
-//           />
-
-//           <Wallet />
-//           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-//             <div className="bg-gray-100 p-3 rounded-lg">
-//               <div className="text-gray-600">Total Bets</div>
-//               <div className="font-bold text-xl">{selectedGame.total_bets}</div>
-//             </div>
-//             <div className="bg-gray-100 p-3 rounded-lg">
-//               <div className="text-gray-600">Balance</div>
-//               <div className="font-bold text-xl">₹{profile?.wallet}</div>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default GameTabs;
-
 "use client";
 import React, { useEffect } from "react";
 import useColorGameStore, { GameDuration } from "@/store/useColorGameStore";
 import GameTimer from "./GameTimer";
-
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/authStore";
 import { ColorGame } from "@/types";
 
 const GameTabs: React.FC = () => {
-  const {
-    activeGames,
-    selectedGame,
-    selectGame,
-    fetchGameByDuration,
-    handleRefresh,
-  } = useColorGameStore();
+  const { activeGames, selectedGame, selectGame, fetchActiveGames } =
+    useColorGameStore();
+  const { user, isAuthenticated } = useAuth();
+  const { user: profile, getProfile } = useAuthStore();
 
   useEffect(() => {
-    // Always fetch 30s game initially to ensure we have data
-    fetchGameByDuration(GameDuration.THIRTY_SECONDS);
-  }, []); // Empty dependency array for initial load only
-
-  // Auto-select the first available game if none is selected
-  useEffect(() => {
-    if (!selectedGame && activeGames[GameDuration.THIRTY_SECONDS]) {
-      selectGame(activeGames[GameDuration.THIRTY_SECONDS]);
+    if (isAuthenticated && user) {
+      const userId = user?.id; // You'll need to implement this
+      if (userId) {
+        getProfile(userId);
+      }
     }
-  }, [activeGames, selectedGame, selectGame]);
+  }, [isAuthenticated, user, getProfile]);
+  // Initial fetch of active games if needed
+  useEffect(() => {
+    if (Object.keys(activeGames).length === 0) {
+      fetchActiveGames();
+    }
+  }, [activeGames, fetchActiveGames]);
 
   const tabs = [
     { id: GameDuration.THIRTY_SECONDS, label: "30 Seconds" },
@@ -152,15 +36,22 @@ const GameTabs: React.FC = () => {
 
   const handleGameTimerFinish = () => {
     // Refresh games when a timer finishes
-    fetchGameByDuration(selectedGame?.duration ?? GameDuration.THIRTY_SECONDS);
-    handleRefresh();
+    fetchActiveGames();
+    console.log(activeGames)
+    // If the current game finished, potentially select another active game
+    if (selectedGame) {
+      const nextActiveGameKey = Object.keys(activeGames).find(
+        (key) => key === selectedGame.duration && activeGames[key]
+      );
+
+      if (nextActiveGameKey) {
+        selectGame(activeGames[nextActiveGameKey]);
+      }
+    }
   };
 
   const handleSelectGame = (duration: string) => {
-    // Fetch the game for the selected duration
-    fetchGameByDuration(duration);
     const game = activeGames[duration];
-  
     if (game) {
       selectGame(game);
     }
@@ -168,44 +59,64 @@ const GameTabs: React.FC = () => {
 
   return (
     <div className="w-full">
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex" aria-label="Tabs">
-          {tabs.map((tab) => {
-            const isActive = selectedGame?.duration === tab.id;
-            
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleSelectGame(tab.id)}
-                className={`w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm ${
-                  isActive
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-                aria-current={isActive ? "page" : undefined}
-                // Disable button if no active game for this duration
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {selectedGame && (
-        <div className="mt-4">
-          {/* Key prop ensures re-render when game changes */}
-          <GameTimer
-            key={selectedGame.id || selectedGame.duration}
-            endTime={selectedGame.end_time}
-            game={selectedGame as ColorGame}
-            onFinish={handleGameTimerFinish}
-          />
-        </div>
-      )}
-    </div>
+       <div className="mt-4">
+         <div className="">
+           <div className="grid grid-cols-4 sm:gap-3 gap-2 mb-4 w-full ">
+             {tabs.map((tab) => {
+               const isActive = selectedGame?.duration === tab.id;
+               const game = activeGames[tab.id];
+               return (
+                 <button
+                   key={tab.id}
+                   onClick={() => handleSelectGame(tab.id)}
+                   className={`relative  sm:min-w-0 rounded-xl sm:p-4 py-2 px-1 cursor-pointer text-center ${
+                     isActive
+                       ? "bg-gradient-to-br from-[#eac57d] to-[#ffbe00] text-[#783405] font-medium  text-[10px] sm:text-sm shadow-lg"
+                       : "bg-[#373333] text-gray-200 hover:bg-[#373333]"
+                   }`}
+                   aria-current={isActive ? "page" : undefined}
+                   disabled={!game}
+                 >
+                   <div className="text-2xl mb-1 sm:mb-2 flex justify-center">
+                     <img
+                       src={
+                         isActive
+                           ? "https://bdggame5.com/assets/png/time_a-07f92409.png"
+                           : "https://bdggame5.com/assets/png/time-5d4e96a3.png"
+                       }
+                       alt="Time Icon"
+                       className="sm:w-20 w-10"
+                     />
+                   </div>
+                   <div className="sm:text-xs text-[10px] -mt-[4px] font-medium leading-tight whitespace-pre-line">
+                     {tab.label}
+                   </div>
+                   {!game && (
+                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-2xl flex items-center justify-center">
+                       <span className="text-xs text-gray-400">
+                         Not Available
+                       </span>
+                     </div>
+                   )}
+                 </button>
+               );
+             })}
+           </div>
+         </div>
+         {selectedGame && (
+           <div className="mb-4">
+             <GameTimer
+               key={selectedGame.id || selectedGame.duration}
+               endTime={selectedGame.end_time}
+               game={selectedGame as ColorGame}
+               onFinish={handleGameTimerFinish}
+             />
+           </div>
+         )}
+       </div>
+     </div>
   );
 };
 
 export default GameTabs;
+

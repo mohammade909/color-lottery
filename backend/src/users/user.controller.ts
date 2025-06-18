@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Request,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -38,19 +39,31 @@ export class UsersController {
     return this.usersService.findAll(query);
   }
 
+  // Move specific routes BEFORE parameterized routes
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  getProfile(@Request() req) {
+    const userId = req.user.id || req.user.sub;
+
+    return this.usersService.findById(userId);
+  }
+
+  @Get('deposits/:id') // Fixed typo: "depoists" -> "deposits"
+  @UseGuards(JwtAuthGuard)
+  getDeposits(@Param('id') id: string) {
+    return this.usersService.findById(id);
+  }
+
+  @Get('withdrawal/:id') // Fixed typo: "withdrawal" -> "withdrawals"
+  @UseGuards(JwtAuthGuard)
+  getWithdrawals(@Param('id') id: string) {
+    return this.usersService.findById(id);
+  }
+
+  // Parameterized routes should come AFTER specific routes
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string) {
-    return this.usersService.findById(id);
-  }
-  @Get('depoists/:id')
-  @UseGuards(JwtAuthGuard)
-  getDepostis(@Param('id') id: string) {
-    return this.usersService.findById(id);
-  }
-  @Get('withdrawal/:id')
-  @UseGuards(JwtAuthGuard)
-  getWithdrawals(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
 

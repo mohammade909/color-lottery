@@ -536,47 +536,112 @@ export class GameService implements OnModuleInit {
     }
   }
 
+  // private async generateStrategicResult(gameId: string): Promise<{
+  //   number: number;
+  //   color: ColorValue;
+  //   size: SizeValue;
+  // }> {
+  //   // Get all bets for this game
+  //   const bets = await this.userBetRepository.find({
+  //     where: { period_id: gameId },
+  //   });
+
+  //   // Calculate total amounts for each bet type
+  //   const betAnalysis = this.analyzeBets(bets);
+
+  //   // Find the option with minimum total bet amount for each category
+  //   const winningColor = this.findMinBetOption(betAnalysis.colorBets);
+  //   const winningSize = this.findMinBetOption(betAnalysis.sizeBets);
+  //   const winningNumber = this.findMinBetOption(betAnalysis.numberBets);
+
+  //   // Generate a number that matches our strategic requirements
+  //   const strategicNumber = this.generateStrategicNumber(
+  //     winningColor,
+  //     winningSize,
+  //     winningNumber,
+  //   );
+
+  //   // Get color and size based on the strategic number
+  //   const color = this.getColorForNumber(strategicNumber);
+  //   const size = strategicNumber > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+  //   this.logger.log(
+  //     `Strategic result for game ${gameId}: Number=${strategicNumber}, Color=${color}, Size=${size}`,
+  //   );
+  //   this.logger.log(`Bet analysis: ${JSON.stringify(betAnalysis)}`);
+
+  //   return {
+  //     number: strategicNumber,
+  //     color,
+  //     size,
+  //   };
+  // }
+
+
   private async generateStrategicResult(gameId: string): Promise<{
-    number: number;
-    color: ColorValue;
-    size: SizeValue;
-  }> {
-    // Get all bets for this game
-    const bets = await this.userBetRepository.find({
-      where: { period_id: gameId },
-    });
+  number: number;
+  color: ColorValue;
+  size: SizeValue;
+}> {
+  // Get all bets for this game
+  const bets = await this.userBetRepository.find({
+    where: { period_id: gameId },
+  });
 
-    // Calculate total amounts for each bet type
-    const betAnalysis = this.analyzeBets(bets);
+  // Check if we have enough bets to use strategic calculation
+  const betCount = bets.length;
+  this.logger.log(`Game ${gameId} has ${betCount} bets`);
 
-    // Find the option with minimum total bet amount for each category
-    const winningColor = this.findMinBetOption(betAnalysis.colorBets);
-    const winningSize = this.findMinBetOption(betAnalysis.sizeBets);
-    const winningNumber = this.findMinBetOption(betAnalysis.numberBets);
-
-    // Generate a number that matches our strategic requirements
-    const strategicNumber = this.generateStrategicNumber(
-      winningColor,
-      winningSize,
-      winningNumber,
-    );
-
-    // Get color and size based on the strategic number
-    const color = this.getColorForNumber(strategicNumber);
-    const size = strategicNumber > 4 ? SizeValue.BIG : SizeValue.SMALL;
+  if (betCount < 100) {
+    // Use random result when bet count is less than 100
+    const randomNumber = Math.floor(Math.random() * 10);
+    const color = this.getColorForNumber(randomNumber);
+    const size = randomNumber > 4 ? SizeValue.BIG : SizeValue.SMALL;
 
     this.logger.log(
-      `Strategic result for game ${gameId}: Number=${strategicNumber}, Color=${color}, Size=${size}`,
+      `Random result for game ${gameId} (${betCount} bets): Number=${randomNumber}, Color=${color}, Size=${size}`,
     );
-    this.logger.log(`Bet analysis: ${JSON.stringify(betAnalysis)}`);
 
     return {
-      number: strategicNumber,
+      number: randomNumber,
       color,
       size,
     };
   }
 
+  // Use strategic calculation when bet count is 100 or more
+  this.logger.log(`Using strategic calculation for game ${gameId} with ${betCount} bets`);
+
+  // Calculate total amounts for each bet type
+  const betAnalysis = this.analyzeBets(bets);
+
+  // Find the option with minimum total bet amount for each category
+  const winningColor = this.findMinBetOption(betAnalysis.colorBets);
+  const winningSize = this.findMinBetOption(betAnalysis.sizeBets);
+  const winningNumber = this.findMinBetOption(betAnalysis.numberBets);
+
+  // Generate a number that matches our strategic requirements
+  const strategicNumber = this.generateStrategicNumber(
+    winningColor,
+    winningSize,
+    winningNumber,
+  );
+
+  // Get color and size based on the strategic number
+  const color = this.getColorForNumber(strategicNumber);
+  const size = strategicNumber > 4 ? SizeValue.BIG : SizeValue.SMALL;
+
+  this.logger.log(
+    `Strategic result for game ${gameId}: Number=${strategicNumber}, Color=${color}, Size=${size}`,
+  );
+  this.logger.log(`Bet analysis: ${JSON.stringify(betAnalysis)}`);
+
+  return {
+    number: strategicNumber,
+    color,
+    size,
+  };
+}
   private analyzeBets(bets: UserBet[]): {
     colorBets: Record<string, number>;
     sizeBets: Record<string, number>;
