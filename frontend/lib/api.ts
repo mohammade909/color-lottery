@@ -261,7 +261,7 @@ export const coinFlipAPI = {
 
   // Get user's game history with pagination
   getUserGames: async (limit: number = 20, offset: number = 0): Promise<Game[]> => {
-    const response = await api.get(`/flip-coin?limit=${limit}&offset=${offset}`);
+    const response = await api.get(`/coin-flip?limit=${limit}&offset=${offset}`);
     return response.data;
   },
 

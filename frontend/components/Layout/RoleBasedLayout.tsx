@@ -1,5 +1,6 @@
 "use client";
-import React, { ReactNode, useEffect } from "react";
+
+import React, { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../hooks/useAuth";
 import DashboardLayout from "./DashboardLayout";
@@ -12,44 +13,74 @@ interface RoleBasedLayoutProps {
 const RoleBasedLayout: React.FC<RoleBasedLayoutProps> = ({ children }) => {
   const { isAuthenticated, user, loading } = useAuth();
   const router = useRouter();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
-    // If not loading and not authenticated, redirect to login
-    if (!loading && !isAuthenticated) {
-      console.log("User not authenticated, redirecting to login");
-      router.replace("/");
+    // Only redirect after loading is complete and we're sure user is not authenticated
+    if (!loading) {
+      if (!isAuthenticated || !user) {
+        console.log("User not authenticated, redirecting to login");
+        setShouldRedirect(true);
+        // Small delay to prevent flashing
+        const timer = setTimeout(() => {
+          router.replace("/");
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      } else {
+        setShouldRedirect(false);
+      }
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, user, loading, router]);
 
   // Show loading spinner while authentication is being checked
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">Loading...</span>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600 font-medium">Authenticating...</span>
+        </div>
       </div>
     );
   }
 
-  // If not authenticated, don't render anything (redirect is happening)
-  if (!isAuthenticated || !user) {
-    return null;
+  // If redirecting, show a brief loading state
+  if (shouldRedirect || !isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600">Redirecting...</span>
+        </div>
+      </div>
+    );
   }
 
-  // Admin Layout
-  if (user.role === "admin") {
-    return <DashboardLayout>{children}</DashboardLayout>;
+  // Render based on user role
+  switch (user.role) {
+    case "admin":
+      return <DashboardLayout>{children}</DashboardLayout>;
+    
+    case "user":
+      return <Layout>{children}</Layout>;
+    
+    default:
+      console.error("Unknown user role:", user.role);
+      // For unknown roles, redirect to login
+      useEffect(() => {
+        router.replace("/");
+      }, []);
+      
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Invalid user role</p>
+            <p className="text-gray-600">Redirecting to login...</p>
+          </div>
+        </div>
+      );
   }
-
-  // User Layout (assuming regular users get Layout component)
-  if (user.role === "user") {
-    return <Layout>{children}</Layout>;
-  }
-
-  // Unknown role - redirect to login or show error
-  console.error("Unknown user role:", user.role);
-  router.replace("/");
-  return null;
 };
 
 export default RoleBasedLayout;

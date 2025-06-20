@@ -156,8 +156,8 @@ const Wallet: React.FC<WalletProps> = () => {
               </div>
             </div>
           </div>
-          {/* 
-          <div>
+          
+          {/* <div>
             <h3 className="font-medium text-gray-800 mb-4">
               Recent Transactions
             </h3>

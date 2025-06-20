@@ -9,6 +9,9 @@ import {
   GameStats,
   CreateGameDto,
 } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/authStore";
+import { formatCurrency } from "@/app/dashboard/wallet/page";
 
 const CoinFlipGame: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -26,6 +29,15 @@ const CoinFlipGame: React.FC = () => {
   const [showResult, setShowResult] = useState(false);
   const [coinSide, setCoinSide] = useState<"heads" | "tails">("heads");
   const [showResultPopup, setShowResultPopup] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const { user: profile, getProfile } = useAuthStore();
+
+  const userId = user?.id
+  useEffect(() => {
+    if (userId) {
+      getProfile(userId);
+    }
+  }, [userId]);
 
   useEffect(() => {
     // Initialize socket connection
@@ -71,13 +83,13 @@ const CoinFlipGame: React.FC = () => {
         setIsFlipping(false);
         setShowResult(true);
         setCurrentGame(null);
-
         // Auto-hide result after 5 seconds
         setTimeout(() => setShowResult(false), 5000);
       }
     });
 
     newSocket.on("game_history", (data) => {
+      console.log(data);
       if (data.success) {
         setGameHistory(data.games);
       }
@@ -126,33 +138,28 @@ const CoinFlipGame: React.FC = () => {
       setShowResultPopup(false);
       // Emit via WebSocket for real-time animation
       const result = await coinFlipAPI.flipCoin(currentGame.id);
-       setTimeout(() => {
+      setTimeout(() => {
         // Stop the spinning animation
         setIsFlipping(false);
-        
+
         // Set the final coin side
         setCoinSide(result.result);
-        
+
         // Store the result
         setLastResult(result);
-        
+
         // Update balance
         setBalance(result.newBalance);
-        
+
         // Clear current game
         setCurrentGame(null);
-        
+
         // Show result popup after a brief delay to see the coin settle
         setTimeout(() => {
           setShowResultPopup(true);
         }, 500);
 
- 
-        
         // setGameHistory(prev => [newGame, ...prev.slice(0, 9)]);
-        
-     
-        
       }, 2000);
       // socket.emit('flip_coin', {
       //   gameId: currentGame.id
@@ -163,9 +170,13 @@ const CoinFlipGame: React.FC = () => {
     }
   };
 
-  const getGameHistory = () => {
-    if (!socket) return;
-    socket.emit("get_game_history", { limit: 10, offset: 0 });
+  const getGameHistory = async () => {
+    try {
+      const result = await coinFlipAPI.getUserGames();
+      setGameHistory(result);
+    } catch (error) {
+      console.log(error)
+    }
   };
 
   const getGameStats = () => {
@@ -174,8 +185,8 @@ const CoinFlipGame: React.FC = () => {
   };
 
   useEffect(() => {
+    getGameHistory();
     if (isConnected) {
-      getGameHistory();
       getGameStats();
     }
   }, [isConnected]);
@@ -184,7 +195,6 @@ const CoinFlipGame: React.FC = () => {
     setShowResultPopup(false);
   };
   return (
-   
     //     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 relative">
     //   <div className="max-w-6xl mx-auto">
     //     {/* Header */}
@@ -210,7 +220,7 @@ const CoinFlipGame: React.FC = () => {
     //           {/* Enhanced Coin Animation */}
     //           <div className="flex justify-center mb-8">
     //             <div className="relative">
-    //               <div 
+    //               <div
     //                 className={`w-40 h-40 rounded-full border-8 border-yellow-400 shadow-2xl transition-all duration-500 ${
     //                   isFlipping ? 'animate-spin' : ''
     //                 } ${coinSide === 'heads' ? 'bg-gradient-to-br from-yellow-300 to-yellow-600' : 'bg-gradient-to-br from-gray-300 to-gray-600'}`}
@@ -340,7 +350,6 @@ const CoinFlipGame: React.FC = () => {
 
     //       {/* Sidebar */}
     //       <div className="space-y-6">
-        
 
     //         {/* Recent Games */}
     //         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
@@ -387,8 +396,8 @@ const CoinFlipGame: React.FC = () => {
     //   {showResultPopup && lastResult && (
     //     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     //       <div className={`max-w-md w-full rounded-2xl p-8 border-2 shadow-2xl transform transition-all ${
-    //         lastResult.isWin 
-    //           ? 'bg-gradient-to-br from-green-500/20 to-green-600/30 border-green-400/50' 
+    //         lastResult.isWin
+    //           ? 'bg-gradient-to-br from-green-500/20 to-green-600/30 border-green-400/50'
     //           : 'bg-gradient-to-br from-red-500/20 to-red-600/30 border-red-400/50'
     //       }`}>
     //         <div className="text-center">
@@ -398,22 +407,22 @@ const CoinFlipGame: React.FC = () => {
     //           }`}>
     //             {lastResult.isWin ? '🎉' : '😔'}
     //           </div>
-              
+
     //           {/* Result Text */}
     //           <h2 className={`text-4xl font-bold mb-4 ${
     //             lastResult.isWin ? 'text-green-300' : 'text-red-300'
     //           }`}>
     //             {lastResult.isWin ? 'YOU WON!' : 'YOU LOST!'}
     //           </h2>
-              
+
     //           {/* Coin Result */}
     //           <div className="mb-6">
     //             <p className="text-xl text-white mb-2">
     //               The coin landed on
     //             </p>
     //             <div className={`inline-flex items-center space-x-3 px-6 py-3 rounded-xl ${
-    //               lastResult.result === 'heads' 
-    //                 ? 'bg-yellow-400/20 border border-yellow-400/50' 
+    //               lastResult.result === 'heads'
+    //                 ? 'bg-yellow-400/20 border border-yellow-400/50'
     //                 : 'bg-gray-400/20 border border-gray-400/50'
     //             }`}>
     //               <div className="text-3xl">
@@ -424,7 +433,7 @@ const CoinFlipGame: React.FC = () => {
     //               </div>
     //             </div>
     //           </div>
-              
+
     //           {/* Win Amount */}
     //           {lastResult.isWin && (
     //             <div className="mb-6">
@@ -433,14 +442,14 @@ const CoinFlipGame: React.FC = () => {
     //               </p>
     //             </div>
     //           )}
-              
+
     //           {/* New Balance */}
     //           <div className="mb-8">
     //             <p className="text-gray-300 text-lg">
     //               New Balance: <span className="text-white font-bold text-xl">${lastResult.newBalance.toFixed(2)}</span>
     //             </p>
     //           </div>
-              
+
     //           {/* Close Button */}
     //           <button
     //             onClick={closeResultPopup}
@@ -453,19 +462,25 @@ const CoinFlipGame: React.FC = () => {
     //     </div>
     //   )}
     // </div>
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 relative">
       <style jsx>{`
         @keyframes coinFlip {
-          0% { transform: rotateY(0deg); }
-          50% { transform: rotateY(900deg); }
-          100% { transform: rotateY(1800deg); }
+          0% {
+            transform: rotateY(0deg);
+          }
+          50% {
+            transform: rotateY(900deg);
+          }
+          100% {
+            transform: rotateY(1800deg);
+          }
         }
-        
+
         .coin-flip {
           animation: coinFlip 2s ease-in-out;
           transform-style: preserve-3d;
         }
-        
+
         .coin-face {
           backface-visibility: hidden;
           position: absolute;
@@ -475,11 +490,11 @@ const CoinFlipGame: React.FC = () => {
           align-items: center;
           justify-content: center;
         }
-        
+
         .coin-heads {
           background: linear-gradient(135deg, #fbbf24, #f59e0b);
         }
-        
+
         .coin-tails {
           background: linear-gradient(135deg, #9ca3af, #6b7280);
           transform: rotateY(180deg);
@@ -492,7 +507,9 @@ const CoinFlipGame: React.FC = () => {
           <h1 className="text-5xl font-bold text-white mb-2 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
             🪙 Coin Flip Casino
           </h1>
-          <p className="text-gray-300 text-lg">Test your luck with our exciting coin flip game!</p>
+          <p className="text-gray-300 text-lg">
+            Test your luck with our exciting coin flip game!
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -502,19 +519,28 @@ const CoinFlipGame: React.FC = () => {
               {/* Balance Display */}
               <div className="text-center mb-8">
                 <div className="inline-block bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl p-6 shadow-xl">
-                  <h2 className="text-white text-xl font-semibold mb-2">Your Balance</h2>
-                  <div className="text-4xl font-bold text-white">${balance.toFixed(2)}</div>
+                  <h2 className="text-white text-xl font-semibold mb-2">
+                    Your Balance
+                  </h2>
+                  <div className="text-4xl font-bold text-white">
+                  ₹{profile ? formatCurrency(profile.wallet) : "0.00"}
+                  </div>
                 </div>
               </div>
 
               {/* Enhanced 3D Coin Animation */}
               <div className="flex justify-center mb-8">
                 <div className="relative perspective-1000">
-                  <div 
-                    className={`w-40 h-40 relative ${isFlipping ? 'coin-flip' : ''}`}
+                  <div
+                    className={`w-40 h-40 relative ${isFlipping ? "coin-flip" : ""
+                      }`}
                     style={{
-                      transformStyle: 'preserve-3d',
-                      transform: !isFlipping ? (coinSide === 'heads' ? 'rotateY(0deg)' : 'rotateY(180deg)') : undefined
+                      transformStyle: "preserve-3d",
+                      transform: !isFlipping
+                        ? coinSide === "heads"
+                          ? "rotateY(0deg)"
+                          : "rotateY(180deg)"
+                        : undefined,
                     }}
                   >
                     {/* Heads side */}
@@ -523,7 +549,7 @@ const CoinFlipGame: React.FC = () => {
                         👑
                       </div>
                     </div>
-                    
+
                     {/* Tails side */}
                     <div className="coin-face coin-tails border-8 border-yellow-400 shadow-2xl">
                       <div className="text-6xl font-bold text-white drop-shadow-lg">
@@ -531,7 +557,7 @@ const CoinFlipGame: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Flip effects */}
                   {isFlipping && (
                     <>
@@ -546,7 +572,9 @@ const CoinFlipGame: React.FC = () => {
               {!currentGame && !isFlipping && (
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-white text-lg font-semibold mb-3">Bet Amount</label>
+                    <label className="block text-white text-lg font-semibold mb-3">
+                      Bet Amount
+                    </label>
                     <div className="flex items-center space-x-4">
                       <input
                         type="number"
@@ -573,26 +601,26 @@ const CoinFlipGame: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-white text-lg font-semibold mb-3">Choose Your Side</label>
+                    <label className="block text-white text-lg font-semibold mb-3">
+                      Choose Your Side
+                    </label>
                     <div className="grid grid-cols-2 gap-4">
                       <button
-                        onClick={() => setSelectedChoice('heads')}
-                        className={`p-6 rounded-xl border-2 transition-all ${
-                          selectedChoice === 'heads'
-                            ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300'
-                            : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        onClick={() => setSelectedChoice("heads")}
+                        className={`p-6 rounded-xl border-2 transition-all ${selectedChoice === "heads"
+                            ? "border-yellow-400 bg-yellow-400/20 text-yellow-300"
+                            : "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                          }`}
                       >
                         <div className="text-4xl mb-2">👑</div>
                         <div className="text-xl font-bold">Heads</div>
                       </button>
                       <button
-                        onClick={() => setSelectedChoice('tails')}
-                        className={`p-6 rounded-xl border-2 transition-all ${
-                          selectedChoice === 'tails'
-                            ? 'border-gray-400 bg-gray-400/20 text-gray-300'
-                            : 'border-white/30 bg-white/10 text-white hover:bg-white/20'
-                        }`}
+                        onClick={() => setSelectedChoice("tails")}
+                        className={`p-6 rounded-xl border-2 transition-all ${selectedChoice === "tails"
+                            ? "border-gray-400 bg-gray-400/20 text-gray-300"
+                            : "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                          }`}
                       >
                         <div className="text-4xl mb-2">T</div>
                         <div className="text-xl font-bold">Tails</div>
@@ -614,9 +642,12 @@ const CoinFlipGame: React.FC = () => {
               {currentGame && !isFlipping && (
                 <div className="text-center space-y-6">
                   <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-6">
-                    <h3 className="text-white text-xl font-semibold mb-2">Bet Placed!</h3>
+                    <h3 className="text-white text-xl font-semibold mb-2">
+                      Bet Placed!
+                    </h3>
                     <p className="text-gray-300">
-                      Betting ${currentGame.bet_amount} on {currentGame.bet_choice}
+                      Betting ${currentGame.bet_amount} on{" "}
+                      {currentGame.bet_choice}
                     </p>
                   </div>
                   <button
@@ -632,11 +663,16 @@ const CoinFlipGame: React.FC = () => {
               {isFlipping && (
                 <div className="text-center">
                   <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-6">
-                    <h3 className="text-white text-xl font-semibold mb-2">🪙 Flipping...</h3>
+                    <h3 className="text-white text-xl font-semibold mb-2">
+                      🪙 Flipping...
+                    </h3>
                     <p className="text-gray-300">Hold your breath!</p>
                     <div className="mt-4">
                       <div className="w-full bg-gray-200/20 rounded-full h-2">
-                        <div className="bg-yellow-400 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                        <div
+                          className="bg-yellow-400 h-2 rounded-full animate-pulse"
+                          style={{ width: "100%" }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -649,16 +685,17 @@ const CoinFlipGame: React.FC = () => {
           <div className="space-y-6">
             {/* Recent Games */}
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-              <h3 className="text-white text-xl font-bold mb-4">🕒 Recent Games</h3>
+              <h3 className="text-white text-xl font-bold mb-4">
+                🕒 Recent Games
+              </h3>
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 {gameHistory.map((game, index) => (
                   <div
                     key={game.id || index}
-                    className={`p-3 rounded-lg border ${
-                      game.won_amount > 0
-                        ? 'bg-green-500/10 border-green-500/30'
-                        : 'bg-red-500/10 border-red-500/30'
-                    }`}
+                    className={`p-3 rounded-lg border ${game.won_amount > 0
+                        ? "bg-green-500/10 border-green-500/30"
+                        : "bg-red-500/10 border-red-500/30"
+                      }`}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -669,10 +706,15 @@ const CoinFlipGame: React.FC = () => {
                           Result: {game.result}
                         </div>
                       </div>
-                      <div className={`text-sm font-semibold ${
-                        game.won_amount > 0 ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {game.won_amount > 0 ? `+$${game.won_amount}` : `-$${game.bet_amount}`}
+                      <div
+                        className={`text-sm font-semibold ${game.won_amount > 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                          }`}
+                      >
+                        {game.won_amount > 0
+                          ? `+$${game.won_amount}`
+                          : `-$${game.bet_amount}`}
                       </div>
                     </div>
                   </div>
@@ -691,61 +733,70 @@ const CoinFlipGame: React.FC = () => {
       {/* Result Popup Modal */}
       {showResultPopup && lastResult && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`max-w-md w-full rounded-2xl p-8 border-2 shadow-2xl transform transition-all ${
-            lastResult.isWin 
-              ? 'bg-gradient-to-br from-green-500/20 to-green-600/30 border-green-400/50' 
-              : 'bg-gradient-to-br from-red-500/20 to-red-600/30 border-red-400/50'
-          }`}>
+          <div
+            className={`max-w-md w-full rounded-2xl p-8 border-2 shadow-2xl transform transition-all ${lastResult.isWin
+                ? "bg-gradient-to-br from-green-500/20 to-green-600/30 border-green-400/50"
+                : "bg-gradient-to-br from-red-500/20 to-red-600/30 border-red-400/50"
+              }`}
+          >
             <div className="text-center">
               {/* Animated Result Icon */}
-              <div className={`text-8xl mb-6 transform transition-all duration-1000 ${
-                showResultPopup ? 'scale-100 rotate-0' : 'scale-0 rotate-180'
-              }`}>
-                {lastResult.isWin ? '🎉' : '😔'}
+              <div
+                className={`text-8xl mb-6 transform transition-all duration-1000 ${showResultPopup ? "scale-100 rotate-0" : "scale-0 rotate-180"
+                  }`}
+              >
+                {lastResult.isWin ? "🎉" : "😔"}
               </div>
-              
+
               {/* Result Text */}
-              <h2 className={`text-4xl font-bold mb-4 ${
-                lastResult.isWin ? 'text-green-300' : 'text-red-300'
-              }`}>
-                {lastResult.isWin ? 'YOU WON!' : 'YOU LOST!'}
+              <h2
+                className={`text-4xl font-bold mb-4 ${lastResult.isWin ? "text-green-300" : "text-red-300"
+                  }`}
+              >
+                {lastResult.isWin ? "YOU WON!" : "YOU LOST!"}
               </h2>
-              
+
               {/* Coin Result */}
               <div className="mb-6">
-                <p className="text-xl text-white mb-2">
-                  The coin landed on
-                </p>
-                <div className={`inline-flex items-center space-x-3 px-6 py-3 rounded-xl ${
-                  lastResult.result === 'heads' 
-                    ? 'bg-yellow-400/20 border border-yellow-400/50' 
-                    : 'bg-gray-400/20 border border-gray-400/50'
-                }`}>
+                <p className="text-xl text-white mb-2">The coin landed on</p>
+                <div
+                  className={`inline-flex items-center space-x-3 px-6 py-3 rounded-xl ${lastResult.result === "heads"
+                      ? "bg-yellow-400/20 border border-yellow-400/50"
+                      : "bg-gray-400/20 border border-gray-400/50"
+                    }`}
+                >
                   <div className="text-3xl">
-                    {lastResult.result === 'heads' ? '👑' : 'T'}
+                    {lastResult.result === "heads" ? "👑" : "T"}
                   </div>
                   <div className="text-2xl font-bold text-white capitalize">
                     {lastResult.result}
                   </div>
                 </div>
               </div>
-              
+
               {/* Win Amount */}
               {lastResult.isWin && (
                 <div className="mb-6">
                   <p className="text-green-300 text-xl">
-                    You won <span className="font-bold text-2xl">${lastResult.wonAmount.toFixed(2)}</span>!
+                    You won{" "}
+                    <span className="font-bold text-2xl">
+                      ${lastResult.wonAmount.toFixed(2)}
+                    </span>
+                    !
                   </p>
                 </div>
               )}
-              
+
               {/* New Balance */}
               <div className="mb-8">
                 <p className="text-gray-300 text-lg">
-                  New Balance: <span className="text-white font-bold text-xl">${lastResult.newBalance.toFixed(2)}</span>
+                  New Balance:{" "}
+                  <span className="text-white font-bold text-xl">
+                    ${lastResult.newBalance.toFixed(2)}
+                  </span>
                 </p>
               </div>
-              
+
               {/* Close Button */}
               <button
                 onClick={closeResultPopup}
